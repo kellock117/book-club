@@ -1,0 +1,60 @@
+@import 'tailwindcss';
+
+/* 책장 느낌의 따뜻한 톤. 다크 모드는 시스템 설정을 따른다. */
+:root {
+  --paper: #faf6ee;
+  --surface: #fffdf8;
+  --ink: #3b2a20;
+  --muted: #6f5b4e;
+  --line: #e2d6c2;
+  --accent: #7a4b2a;
+  --accent-ink: #fffdf8;
+  --danger: #b3261e;
+  --star: #c98a1b;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #1e1712;
+    --surface: #2a211a;
+    --ink: #efe4d6;
+    --muted: #b8a695;
+    --line: #43362b;
+    --accent: #d9a06b;
+    --accent-ink: #1e1712;
+    --danger: #f2b8b5;
+    --star: #e7b04a;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-danger: var(--danger);
+  --color-star: var(--star);
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo', sans-serif;
+  --font-serif: 'Noto Serif KR', 'Nanum Myeongjo', 'Apple SD Gothic Neo', serif;
+}
+
+html {
+  background: var(--paper);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-text-size-adjust: 100%;
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 // 서버 액션이 redirect('/?toast=코드')로 보내면 여기서 메시지를 한 번 보여 주고 주소에서 지운다.
 const MESSAGES: Record<string, string> = {
   rated: '평점을 남겼어요',
+  deleted: '삭제했어요',
 };
 
 export function Toast() {

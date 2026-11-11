@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 import { Suspense } from 'react';
 import { Toast } from '@/components/toast';
 import './globals.css';
@@ -26,6 +28,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Suspense fallback={null}>
           <Toast />
         </Suspense>
+        {/* Vercel 대시보드의 Analytics·Speed Insights를 켜 두면 배포 환경에서만 집계된다 */}
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

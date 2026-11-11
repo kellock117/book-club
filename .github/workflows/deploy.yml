@@ -52,7 +52,7 @@ jobs:
       - name: 적용될 마이그레이션 미리보기
         run: supabase db push --remote --dry-run
       - name: 마이그레이션 적용
-        run: supabase db push --remote
+        run: supabase db push --remote --yes
 
   # 3) 웹 배포: DB 마이그레이션이 끝난 뒤에 Vercel로 올린다.
   vercel:

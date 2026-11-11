@@ -1,0 +1,42 @@
+/*
+ * 공용 테마 규칙. 앱의 globals.css가 `@import '@me/ui/theme.css';`로 가져온다.
+ *
+ * 이 파일은 "색의 이름"만 정한다. 실제 색(값)은 앱마다 자기 globals.css의 :root에서 정한다.
+ * 그래서 앱마다 분위기는 다르게(독서 모임은 책장 느낌, 운동은 다른 색) 가면서
+ * 공용 컴포넌트(@me/ui)는 어느 앱에서나 같은 클래스(bg-surface, text-muted …)로 그려진다.
+ *
+ * 앱이 :root에 정의해야 하는 변수:
+ *   --paper --surface --ink --muted --line --accent --accent-ink --danger
+ * 앱이 따로 쓰는 색(예: 독서 모임의 --star)은 앱의 globals.css에서 @theme에 직접 추가한다.
+ *
+ * Tailwind가 이 패키지의 클래스를 읽도록 앱 CSS에 `@source "<상대경로>/packages/ui/src";`를 꼭 둔다.
+ */
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-danger: var(--danger);
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo', sans-serif;
+}
+
+html {
+  background: var(--paper);
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  /* 폰을 가로로 돌릴 때 글자가 커지지 않게 */
+  -webkit-text-size-adjust: 100%;
+}
+
+/* 키보드로 이동할 때 현재 위치가 보이게 */
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}

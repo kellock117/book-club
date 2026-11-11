@@ -1,40 +1,24 @@
 {
-  "name": "book-club",
-  "version": "0.1.0",
+  "name": "me-apps",
   "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit",
-    "db:types": "supabase gen types typescript --local > types/database.ts",
-    "migrate:notion": "tsx --env-file=.env.local scripts/migrate-from-notion.ts",
-    "copy:cloud": "tsx --env-file=.env.local scripts/copy-to-cloud.ts",
-    "restore": "tsx --env-file=.env.local scripts/restore.ts"
+  "description": "내 앱 모음 모노레포. 앱마다 사이트(Vercel 프로젝트)가 하나씩이다.",
+  "packageManager": "pnpm@10.18.3",
+  "engines": {
+    "node": ">=22"
   },
-  "dependencies": {
-    "@notionhq/client": "^5.31.1",
-    "@supabase/supabase-js": "^2.119.0",
-    "@vercel/analytics": "^2.0.1",
-    "@vercel/speed-insights": "^2.1.0",
-    "next": "^16.4.6",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1",
-    "recharts": "^3.10.1",
-    "server-only": "^0.0.1",
-    "zod": "^4.6.7"
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "check": "turbo run typecheck test build"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.3.5",
-    "@types/node": "^26.6.6",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "postcss": "^8.5.32",
-    "tailwindcss": "^4.3.5",
-    "tsx": "^4.23.15",
-    "typescript": "^7.0.2",
-    "vitest": "^5.1.0"
+    "turbo": "^2.5.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

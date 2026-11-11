@@ -1,0 +1,122 @@
+/**
+ * 백업·복원 도구. 어떤 테이블을 다룰지는 `backup-tables.ts`의 표(TableSpec 목록)로 정한다.
+ *
+ * 쓰는 곳: 매일 도는 크론(apps/book의 /api/cron/daily), 관리자 화면의 백업 내려받기,
+ * 복원 스크립트(apps/book/scripts/restore.ts).
+ * 서버(크론)와 스크립트가 함께 쓰므로 `server-only`나 `@/` 별칭을 쓰지 않는다.
+ *
+ * 백업 파일은 JSON 하나: `{ version: 1, createdAt, tables: { 테이블이름: [행, …] } }`.
+ * 앱을 새로 추가하기 전에 만든 옛 백업에는 새 테이블이 없다. 복원은 "파일에 있는 테이블만" 넣어서 그래도 동작한다.
+ */
+import { z } from 'zod';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+/** 백업 대상 테이블 하나. */
+export type TableSpec = {
+  name: string;
+  /** 복원(upsert)할 때 같은 행으로 볼 열. 복합 키는 쉼표로 잇는다. */
+  conflictKey: string;
+};
+
+export const BACKUP_BUCKET = 'backups';
+export const BACKUP_KEEP_WEEKS = 12;
+/** supabase-js 한 번의 select가 돌려주는 기본 상한. 이만큼 오면 잘렸을 수 있다. */
+const SELECT_LIMIT = 1000;
+
+const backupSchema = z.object({
+  version: z.literal(1),
+  createdAt: z.string(),
+  tables: z.record(z.string(), z.array(z.record(z.string(), z.unknown()))),
+});
+export type Backup = z.infer<typeof backupSchema>;
+
+/**
+ * 백업 파일 내용을 읽어 검증한다.
+ * @param required 반드시 들어 있어야 하는 테이블 이름. 없으면 이유와 함께 거절한다.
+ */
+export function parseBackup(text: string, required: readonly string[] = []): Backup {
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error('백업 파일이 올바른 JSON이 아니에요');
+  }
+  const parsed = backupSchema.safeParse(json);
+  if (!parsed.success) throw new Error(`백업 파일 형식이 맞지 않아요: ${parsed.error.issues[0]?.path.join('.') ?? ''}`);
+  const missing = required.find((t) => !(t in parsed.data.tables));
+  if (missing) throw new Error(`백업 파일 형식이 맞지 않아요: tables.${missing}`);
+  return parsed.data;
+}
+
+const FILE_RE = /^(\d{4})-(\d{2})-(\d{2})\.json$/;
+
+/** `YYYY-MM-DD.json` (UTC 날짜) */
+export function backupFileName(date: Date): string {
+  return `${date.toISOString().slice(0, 10)}.json`;
+}
+
+/** 월요일(UTC)인가. 크론이 UTC 00:00에 돌므로 한국 시간으로도 월요일 오전이다. */
+export function isMonday(date: Date): boolean {
+  return date.getUTCDay() === 1;
+}
+
+/** 보관 기간(주)을 넘긴 백업 파일 이름. 형식이 다른 파일은 건드리지 않는다. */
+export function expiredBackups(names: string[], now: Date, weeks: number = BACKUP_KEEP_WEEKS): string[] {
+  const cutoff = now.getTime() - weeks * 7 * 24 * 60 * 60 * 1000;
+  return names.filter((n) => {
+    const m = FILE_RE.exec(n);
+    if (!m) return false;
+    return Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) < cutoff;
+  });
+}
+
+/** 가장 최근 백업 파일 이름(없으면 null). */
+export function latestBackup(names: string[]): string | null {
+  const valid = names.filter((n) => FILE_RE.test(n)).sort();
+  return valid.at(-1) ?? null;
+}
+
+// supabase-js의 제네릭이 테이블 이름마다 달라 문자열 테이블을 다룰 때는 느슨한 타입을 쓴다.
+type AnyClient = SupabaseClient<any, any, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+/** 표에 있는 모든 테이블을 읽어 백업 객체를 만든다. 행이 1000개 이상이면 잘렸을 수 있어 일부러 실패시킨다. */
+export async function exportAll(db: AnyClient, specs: readonly TableSpec[], now: Date = new Date()): Promise<Backup> {
+  const tables: Backup['tables'] = {};
+  for (const { name } of specs) {
+    const { data, error } = await db.from(name).select('*');
+    if (error) throw new Error(`${name} 읽기 실패: ${error.message}`);
+    if ((data?.length ?? 0) >= SELECT_LIMIT) throw new Error(`${name}가 ${SELECT_LIMIT}행 이상이라 백업이 잘릴 수 있어요. 페이지 단위 읽기를 추가해야 해요`);
+    tables[name] = data ?? [];
+  }
+  return { version: 1, createdAt: now.toISOString(), tables };
+}
+
+/** 표에 있는 모든 테이블의 행 수. 복원 전에 DB가 비어 있는지 확인할 때 쓴다. */
+export async function countAll(db: AnyClient, specs: readonly TableSpec[]): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  for (const { name } of specs) {
+    const { count, error } = await db.from(name).select('*', { count: 'exact', head: true });
+    if (error) throw new Error(`${name} 세기 실패: ${error.message}`);
+    counts[name] = count ?? 0;
+  }
+  return counts;
+}
+
+/**
+ * 백업을 DB에 넣는다. 같은 키가 있으면 덮어쓰므로 두 번 실행해도 개수가 같다.
+ * 백업 파일에 없는 테이블(앱을 추가하기 전의 옛 백업)은 건너뛴다.
+ * @returns 테이블별로 넣은 행 수
+ */
+export async function restoreAll(db: AnyClient, backup: Backup, specs: readonly TableSpec[]): Promise<Record<string, number>> {
+  const done: Record<string, number> = {};
+  for (const { name, conflictKey } of specs) {
+    const data = backup.tables[name];
+    if (!data) continue;
+    for (let i = 0; i < data.length; i += 500) {
+      const { error } = await db.from(name).upsert(data.slice(i, i + 500), { onConflict: conflictKey });
+      if (error) throw new Error(`${name} 복원 실패: ${error.message}`);
+    }
+    done[name] = data.length;
+  }
+  return done;
+}

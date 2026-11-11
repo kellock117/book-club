@@ -1,0 +1,39 @@
+@import 'tailwindcss';
+/* 공용 테마 규칙(색 이름 → 변수). 실제 값은 아래 :root에서 이 앱이 정한다. */
+@import '@me/ui/theme.css';
+/* Tailwind가 @me/ui의 클래스도 읽도록 경로를 알려 준다 */
+@source "../../../packages/ui/src";
+/* 운동 화면 스타일(아티팩트에서 옮긴 것) */
+@import './workout.css';
+
+/*
+ * 운동 앱 팔레트. 따뜻한 회색 바탕에 주황 강조. 다크 모드는 시스템 설정을 따른다.
+ * 위쪽 절반은 이 앱의 화면(workout.css)이 쓰는 이름, 아래 "공용 이름"은 @me/ui(로그인 폼 등)가 쓰는 이름이다.
+ */
+:root {
+  --bg: #f6f5f2; --fg: #23211f; --muted: #6d6862; --line: #dcd8d0; --surface: #ffffff;
+  --accent: #c2410c; --accent-bg: #fde8dc; --track: #eeebe5;
+  /* 근육 지도: 피부·쉬는 근육·윤곽선(--outline), 그리고 강도(l3 주동근 / l2 보조근 / l1 안정화) */
+  --skin: #f1dcc9; --rest: #f6d9d6; --rest-deep: #e9c0bb; --outline: #6b3f38;
+  --l3: #d7262b; --l2: #f07f2a; --l1: #f3c04c;
+  --ok: #2f7d4f; --ok-bg: #e1f1e6; --warn: #a15c07; --warn-bg: #fdf0d5; --danger: #b42318; --scrim: rgba(20, 18, 16, 0.45);
+  --font: 'Noto Sans KR', system-ui, -apple-system, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  color-scheme: light;
+
+  /* 공용 이름 (@me/ui) */
+  --paper: var(--bg);
+  --ink: var(--fg);
+  --accent-ink: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1a1917; --fg: #ece9e3; --muted: #a09a91; --line: #3a3733; --surface: #242220;
+    --accent: #ff9a6c; --accent-bg: #3a2419; --track: #2f2c29;
+    --skin: #5a4a3f; --rest: #4a3334; --rest-deep: #3a2728; --outline: #d4ada5;
+    --l3: #ff5148; --l2: #ff9a45; --l1: #d9a93a;
+    --ok: #6fcf97; --ok-bg: #1f3327; --warn: #f2b45c; --warn-bg: #3a2c14; --danger: #ff8a80; --scrim: rgba(0, 0, 0, 0.6);
+    color-scheme: dark;
+    --accent-ink: #1a1917;
+  }
+}

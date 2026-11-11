@@ -1,0 +1,9 @@
+{
+  "name": "@me/config",
+  "version": "0.0.0",
+  "private": true,
+  "description": "모든 앱·패키지가 상속하는 공용 설정(tsconfig).",
+  "exports": {
+    "./tsconfig.base.json": "./tsconfig.base.json"
+  }
+}

@@ -1,5 +1,6 @@
 node_modules
 .next
+.turbo
 .env.local
 .env*.local
 supabase/.temp
@@ -7,7 +8,7 @@ supabase/.branches
 *.tsbuildinfo
 
 # 개인 정보: 친구들의 실명·평점이 든 노션 스냅샷, 로컬 시드, 기획 문서
-scripts/fixtures/notion-snapshot.json
+apps/book/scripts/fixtures/notion-snapshot.json
 supabase/seed.sql
 독서 모임 웹사이트 스펙.md
 *.private.test.ts

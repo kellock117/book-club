@@ -43,7 +43,7 @@ async function main() {
     return;
   }
 
-  const db = createClient<Database>(need('SUPABASE_URL'), need('SUPABASE_SERVICE_ROLE_KEY'), {
+  const db = createClient<Database>(need('SUPABASE_URL'), need('SUPABASE_SECRET_KEY'), {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 

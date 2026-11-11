@@ -1,5 +1,9 @@
 name: CI & Deploy
 
+# 모노레포 배포 흐름
+#   verify(전체 검사) → supabase(DB 마이그레이션, 모든 앱 공용) → vercel(앱별로, 바뀐 앱만)
+# 앱을 추가하면 아래 vercel 잡의 matrix에 한 줄을 더한다 (docs/ADDING-AN-APP.md).
+
 on:
   pull_request:
   push:
@@ -19,21 +23,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # pnpm 버전은 루트 package.json의 "packageManager"를 따른다
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm turbo typecheck test build
         env:
           # 빌드만 통과시키는 자리표시 값. 실제 값은 Vercel 프로젝트 환경 변수에 둔다.
           SUPABASE_URL: http://localhost:54321
           SUPABASE_SECRET_KEY: build-placeholder
           SITE_PASSWORD: build-placeholder
+          WORKOUT_PASSWORD: build-placeholder
 
-  # 2) DB 마이그레이션: main에서만, "production" 환경 승인 규칙을 따른다.
+  # 2) DB 마이그레이션: main에서만, "production" 환경 승인 규칙을 따른다. (DB 하나를 모든 앱이 함께 쓴다)
   supabase:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: verify
@@ -54,22 +59,43 @@ jobs:
       - name: 마이그레이션 적용
         run: supabase db push --remote --yes
 
-  # 3) 웹 배포: DB 마이그레이션이 끝난 뒤에 Vercel로 올린다.
+  # 3) 웹 배포: 앱마다 Vercel 프로젝트가 따로다. 마이그레이션이 끝난 뒤, 그 앱(또는 공용 패키지)이 바뀐 경우에만 올린다.
   vercel:
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
     needs: supabase
     runs-on: ubuntu-latest
     environment: production
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: book
+            project_secret: VERCEL_PROJECT_ID_BOOK
+          - app: workout
+            project_secret: VERCEL_PROJECT_ID_WORKOUT
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      # 프로젝트 id는 앱마다 다른 시크릿을 읽는다. 각 프로젝트의 Root Directory는 apps/<앱>으로 설정해 둔다.
+      VERCEL_PROJECT_ID: ${{ secrets[matrix.project_secret] }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # turbo-ignore가 직전 커밋과 비교한다
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm i -g vercel@latest
-      - run: vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
-      - run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"
-      - run: vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"
+          cache: pnpm
+      - name: 이 앱이 바뀌었나 (앱 코드 또는 의존하는 packages/*)
+        id: changed
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then echo "yes=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if npx --yes turbo-ignore ${{ matrix.app }} --fallback=HEAD^1; then echo "yes=false" >> "$GITHUB_OUTPUT"; else echo "yes=true" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.changed.outputs.yes == 'true'
+        run: npm i -g vercel@latest
+      - if: steps.changed.outputs.yes == 'true'
+        run: vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+      - if: steps.changed.outputs.yes == 'true'
+        run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"
+      - if: steps.changed.outputs.yes == 'true'
+        run: vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"

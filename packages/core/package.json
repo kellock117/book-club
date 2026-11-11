@@ -1,0 +1,30 @@
+{
+  "name": "@me/core",
+  "version": "0.0.0",
+  "private": true,
+  "description": "모든 앱이 함께 쓰는 서버 쪽 공용 코드: 인증·접근 제한, 날짜, 백업, Supabase 서버 클라이언트.",
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:types": "cd ../.. && npx supabase gen types typescript > packages/core/src/database.ts.tmp && mv packages/core/src/database.ts.tmp packages/core/src/database.ts"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.119.0",
+    "server-only": "^0.0.1",
+    "zod": "^4.6.7"
+  },
+  "peerDependencies": {
+    "next": ">=16"
+  },
+  "devDependencies": {
+    "@me/config": "workspace:*",
+    "@types/node": "^26.6.6",
+    "next": "^16.4.6",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}

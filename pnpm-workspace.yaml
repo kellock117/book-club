@@ -1,0 +1,4 @@
+# pnpm 워크스페이스: apps/* 는 배포되는 사이트, packages/* 는 사이트들이 함께 쓰는 공용 코드.
+packages:
+  - apps/*
+  - packages/*

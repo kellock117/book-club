@@ -1,0 +1,28 @@
+{
+  "name": "@me/ui",
+  "version": "0.0.0",
+  "private": true,
+  "description": "모든 앱이 함께 쓰는 화면 조각(카드·섹션·토스트·로그인 폼)과 공용 테마 규칙.",
+  "type": "module",
+  "exports": {
+    "./theme.css": "./src/theme.css",
+    "./*": "./src/*.tsx"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "next": ">=16",
+    "react": ">=19"
+  },
+  "devDependencies": {
+    "@me/config": "workspace:*",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "next": "^16.4.6",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "typescript": "^7.0.2"
+  }
+}

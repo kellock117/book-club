@@ -62,6 +62,9 @@ export default async function MeetingsPage() {
                       </ul>
                       {!upcoming && <span className="text-sm tabular-nums"><span aria-hidden className="text-star">★</span> {fmtScore(avg)}</span>}
                     </div>
+                    <Link href={`/meetings/${m.id}/edit`} className="inline-flex min-h-11 items-center text-sm font-medium text-muted underline underline-offset-2">
+                      기록하기
+                    </Link>
                   </div>
                 </div>
               </li>

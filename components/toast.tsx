@@ -7,6 +7,9 @@ import { useEffect, useState } from 'react';
 const MESSAGES: Record<string, string> = {
   rated: '평점을 남겼어요',
   deleted: '삭제했어요',
+  recommended: '책을 추천했어요',
+  selected: '이번 달 책을 정했어요',
+  saved: '저장했어요',
 };
 
 export function Toast() {

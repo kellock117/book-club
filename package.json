@@ -10,7 +10,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "db:types": "supabase gen types typescript --local > types/database.ts",
-    "migrate:notion": "tsx --env-file=.env.local scripts/migrate-from-notion.ts"
+    "migrate:notion": "tsx --env-file=.env.local scripts/migrate-from-notion.ts",
+    "copy:cloud": "tsx --env-file=.env.local scripts/copy-to-cloud.ts"
   },
   "dependencies": {
     "@notionhq/client": "^5.31.1",

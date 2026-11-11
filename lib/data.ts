@@ -31,8 +31,10 @@ export const getClubData = unstable_cache(
       interests: must(interests, 'book_interests'),
     };
   },
-  ['club-data'],
-  { tags: [CLUB_TAG] },
+  // 키 이름을 바꾸면 이전 캐시(빈 DB 시절의 결과 등)를 버리고 새로 읽는다.
+  // revalidate는 안전망: 쓰기 경로를 거치지 않고 DB를 직접 바꿔도 10분 안에 반영된다.
+  ['club-data', 'v2'],
+  { tags: [CLUB_TAG], revalidate: 600 },
 );
 
 export type ClubData = Awaited<ReturnType<typeof getClubData>>;

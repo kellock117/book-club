@@ -1,10 +1,9 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { getCurrentMember } from '@/lib/auth/member';
-import { CLUB_TAG } from '@/lib/data';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { ratingInputSchema } from '@/lib/validation/rating';
 
@@ -43,7 +42,6 @@ export async function saveRating(_prev: RateState, formData: FormData): Promise<
     );
   if (error) return { errors: { form: ['저장하지 못했어요. 잠시 뒤에 다시 해 주세요'] }, values };
 
-  // Next 16: revalidateTag는 두 번째 인자가 필요하다. { expire: 0 }은 낡은 값을 보여 주지 않고 바로 새로 읽는다
-  revalidateTag(CLUB_TAG, { expire: 0 });
+  revalidatePath('/', 'layout'); // 브라우저 라우터 캐시를 비워 바로 새 데이터를 보여 준다
   redirect('/?toast=rated');
 }

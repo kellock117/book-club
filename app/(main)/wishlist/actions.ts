@@ -1,9 +1,8 @@
 'use server';
 
-import { revalidateTag } from 'next/cache';
+import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { getCurrentMember } from '@/lib/auth/member';
-import { CLUB_TAG } from '@/lib/data';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 const schema = z.object({ bookId: z.uuid('책을 찾을 수 없어요') });
@@ -23,5 +22,5 @@ export async function toggleInterest(formData: FormData): Promise<void> {
   const { data: existing } = await db.from('book_interests').select('book_id').eq('book_id', bookId).eq('member_id', me.id).maybeSingle();
   if (existing) await db.from('book_interests').delete().eq('book_id', bookId).eq('member_id', me.id);
   else await db.from('book_interests').insert({ book_id: bookId, member_id: me.id });
-  revalidateTag(CLUB_TAG, { expire: 0 });
+  revalidatePath('/', 'layout'); // 브라우저 라우터 캐시를 비워 바로 새 데이터를 보여 준다
 }

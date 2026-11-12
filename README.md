@@ -13,6 +13,9 @@
 | `packages/ui` (`@me/ui`) | 화면 공용: Section/Card, Toast, LoginForm, 테마 |
 | `packages/config` (`@me/config`) | tsconfig 기본값 |
 
+DB는 하나를 앱들이 나눠 씁니다. 테이블 이름은 `<앱>_<이름>`입니다 (독서 = `book_*`, 운동 = `workout_*`). 대시보드에서 접두사로 앱을 구분하고, 테이블 설명(코멘트)에도 `[독서]`·`[운동]`이 붙어 있습니다.
+백업은 매일 한국 시간 00시에 전 앱 테이블을 JSON 하나로 저장합니다 (12주 보관).
+
 규칙과 구조는 [`CLAUDE.md`](CLAUDE.md), 함정·가정·할 일은 [`docs/NOTES.md`](docs/NOTES.md), 새 앱 추가는 [`docs/ADDING-AN-APP.md`](docs/ADDING-AN-APP.md).
 
 ## 로컬 실행

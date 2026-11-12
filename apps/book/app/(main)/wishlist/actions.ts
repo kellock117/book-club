@@ -16,7 +16,7 @@ export async function toggleInterest(formData: FormData): Promise<void> {
   const db = createAdminClient();
   const { bookId } = parsed.data;
 
-  const { data: book } = await db.from('books').select('id,status').eq('id', bookId).maybeSingle();
+  const { data: book } = await db.from('book_books').select('id,status').eq('id', bookId).maybeSingle();
   if (!book || book.status !== 'wishlist') return; // 위시리스트 책에만 관심을 표시한다
 
   const { data: existing } = await db.from('book_interests').select('book_id').eq('book_id', bookId).eq('member_id', me.id).maybeSingle();

@@ -1,7 +1,7 @@
 /**
  * 백업·복원 도구. 어떤 테이블을 다룰지는 `backup-tables.ts`의 표(TableSpec 목록)로 정한다.
  *
- * 쓰는 곳: 매일 도는 크론(apps/book의 /api/cron/daily), 관리자 화면의 백업 내려받기,
+ * 쓰는 곳: 매일 한국 시간 00시에 도는 크론(apps/book의 /api/cron/daily), 관리자 화면의 백업 내려받기,
  * 복원 스크립트(apps/book/scripts/restore.ts).
  * 서버(크론)와 스크립트가 함께 쓰므로 `server-only`나 `@/` 별칭을 쓰지 않는다.
  *
@@ -10,6 +10,7 @@
  */
 import { z } from 'zod';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { todayInSeoul } from './date';
 
 /** 백업 대상 테이블 하나. */
 export type TableSpec = {
@@ -33,8 +34,10 @@ export type Backup = z.infer<typeof backupSchema>;
 /**
  * 백업 파일 내용을 읽어 검증한다.
  * @param required 반드시 들어 있어야 하는 테이블 이름. 없으면 이유와 함께 거절한다.
+ * @param renames 옛 테이블 이름 → 새 이름. 이름 규칙이 바뀌기 전에 만든 백업을 읽을 때 쓴다
+ *                (이미 새 이름이 있으면 그대로 두고, 옛 이름은 무시한다).
  */
-export function parseBackup(text: string, required: readonly string[] = []): Backup {
+export function parseBackup(text: string, required: readonly string[] = [], renames: Readonly<Record<string, string>> = {}): Backup {
   let json: unknown;
   try {
     json = JSON.parse(text);
@@ -43,21 +46,22 @@ export function parseBackup(text: string, required: readonly string[] = []): Bac
   }
   const parsed = backupSchema.safeParse(json);
   if (!parsed.success) throw new Error(`백업 파일 형식이 맞지 않아요: ${parsed.error.issues[0]?.path.join('.') ?? ''}`);
-  const missing = required.find((t) => !(t in parsed.data.tables));
+  const tables: Backup['tables'] = {};
+  for (const [name, rows] of Object.entries(parsed.data.tables)) {
+    const next = renames[name] ?? name;
+    if (next !== name && next in parsed.data.tables) continue; // 새 이름이 이미 있으면 그쪽을 쓴다
+    tables[next] = rows;
+  }
+  const missing = required.find((t) => !(t in tables));
   if (missing) throw new Error(`백업 파일 형식이 맞지 않아요: tables.${missing}`);
-  return parsed.data;
+  return { ...parsed.data, tables };
 }
 
 const FILE_RE = /^(\d{4})-(\d{2})-(\d{2})\.json$/;
 
-/** `YYYY-MM-DD.json` (UTC 날짜) */
+/** `YYYY-MM-DD.json` (한국 날짜). 한국 00시에 돌면 그날 날짜의 파일이 된다. */
 export function backupFileName(date: Date): string {
-  return `${date.toISOString().slice(0, 10)}.json`;
-}
-
-/** 월요일(UTC)인가. 크론이 UTC 00:00에 돌므로 한국 시간으로도 월요일 오전이다. */
-export function isMonday(date: Date): boolean {
-  return date.getUTCDay() === 1;
+  return `${todayInSeoul(date)}.json`;
 }
 
 /** 보관 기간(주)을 넘긴 백업 파일 이름. 형식이 다른 파일은 건드리지 않는다. */

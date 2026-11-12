@@ -60,7 +60,7 @@ export async function saveMember(_prev: FormState, formData: FormData): Promise<
   const id = str(formData.get('id'));
   const db = createAdminClient();
   const row = { name, rotation_order: rotationOrder, color, status };
-  const { error } = id ? await db.from('members').update(row).eq('id', idSchema.parse(id)) : await db.from('members').insert(row);
+  const { error } = id ? await db.from('book_members').update(row).eq('id', idSchema.parse(id)) : await db.from('book_members').insert(row);
   if (error) return { ...dbError(error.message), values };
   done();
   return { ok: true, values: id ? values : { name: '', rotationOrder: '', color: '#8b5e3c', status: 'active' } };
@@ -73,15 +73,15 @@ export async function saveBook(_prev: FormState, formData: FormData): Promise<Fo
   if (!parsed.success) return { errors: z.flattenError(parsed.error).fieldErrors, values };
   const { id, ...rest } = parsed.data;
 
-  const { error } = await createAdminClient().from('books').update(rest).eq('id', id);
+  const { error } = await createAdminClient().from('book_books').update(rest).eq('id', id);
   if (error) return { ...dbError(error.message), values };
   done();
   return { ok: true, values };
 }
 
-type Target = 'books' | 'meetings' | 'ratings';
+type Target = 'book_books' | 'book_meetings' | 'book_ratings';
 const BLOCKED: Record<string, string> = {
-  books: '이 책에 연결된 모임이 있어서 지울 수 없어요. 모임을 먼저 지워 주세요',
+  book_books: '이 책에 연결된 모임이 있어서 지울 수 없어요. 모임을 먼저 지워 주세요',
 };
 
 async function remove(table: Target, formData: FormData): Promise<void> {
@@ -98,11 +98,11 @@ async function remove(table: Target, formData: FormData): Promise<void> {
 }
 
 export async function deleteBook(formData: FormData) {
-  return remove('books', formData);
+  return remove('book_books', formData);
 }
 export async function deleteMeeting(formData: FormData) {
-  return remove('meetings', formData);
+  return remove('book_meetings', formData);
 }
 export async function deleteRating(formData: FormData) {
-  return remove('ratings', formData);
+  return remove('book_ratings', formData);
 }

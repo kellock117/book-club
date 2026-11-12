@@ -6,7 +6,7 @@ import type { BookFields } from '@/lib/validation/book';
 import { copyCover } from './cover';
 
 type Db = SupabaseClient<Database>;
-type BookInsert = Database['public']['Tables']['books']['Insert'];
+type BookInsert = Database['public']['Tables']['book_books']['Insert'];
 
 const str = (v: FormDataEntryValue | null) => (typeof v === 'string' ? v : '');
 
@@ -18,7 +18,7 @@ export function readBookFields(formData: FormData): Record<string, string> {
 /** 같은 ISBN의 책이 있으면 그 책(상태)과 내가 관심을 표시했는지. */
 export async function findDuplicate(db: Db, isbn13: string | null, memberId: string) {
   if (!isbn13) return null;
-  const { data: book } = await db.from('books').select('id,title,status').eq('isbn13', isbn13).maybeSingle();
+  const { data: book } = await db.from('book_books').select('id,title,status').eq('isbn13', isbn13).maybeSingle();
   if (!book) return null;
   const { data: mine } = await db.from('book_interests').select('book_id').eq('book_id', book.id).eq('member_id', memberId).maybeSingle();
   return { id: book.id, title: book.title, status: book.status as 'wishlist' | 'reading' | 'done', interested: !!mine };
@@ -27,7 +27,7 @@ export async function findDuplicate(db: Db, isbn13: string | null, memberId: str
 /** 책 행을 만들고 표지를 Storage에 복사한다. 표지 복사가 실패해도 책은 저장한다(자동 표지). */
 export async function createBook(db: Db, f: BookFields, extra: Pick<BookInsert, 'status' | 'recommended_by' | 'recommend_reason' | 'selected_by' | 'selection_reason'>) {
   const { data, error } = await db
-    .from('books')
+    .from('book_books')
     .insert({
       title: f.title,
       authors: f.authors,
@@ -46,7 +46,7 @@ export async function createBook(db: Db, f: BookFields, extra: Pick<BookInsert, 
   if (error || !data) return { ok: false as const, code: error?.code ?? null };
   if (f.coverUrl) {
     const path = await copyCover(db, data.id, f.coverUrl);
-    if (path) await db.from('books').update({ cover_path: path }).eq('id', data.id);
+    if (path) await db.from('book_books').update({ cover_path: path }).eq('id', data.id);
   }
   return { ok: true as const, id: data.id };
 }

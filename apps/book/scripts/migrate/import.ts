@@ -64,7 +64,7 @@ export async function importSnapshot(db: Db, snap: Snapshot, log: (s: string) =>
 
   // ── members (이름 기준)
   const memberIds = new Map<string, string>();
-  const existingMembers = check(await db.from('members').select('id,name'), 'members 조회');
+  const existingMembers = check(await db.from('book_members').select('id,name'), 'members 조회');
   const memberByName = new Map(existingMembers.map((m) => [m.name, m.id]));
   let colorIdx = existingMembers.length;
   for (const [i, m] of snap.members.entries()) {
@@ -72,12 +72,12 @@ export async function importSnapshot(db: Db, snap: Snapshot, log: (s: string) =>
     const rotation = m.rotationOrder ?? i + 1;
     const existingId = memberByName.get(m.name);
     if (existingId) {
-      ok(await db.from('members').update({ rotation_order: rotation, status }).eq('id', existingId), `멤버 수정(${m.name})`);
+      ok(await db.from('book_members').update({ rotation_order: rotation, status }).eq('id', existingId), `멤버 수정(${m.name})`);
       memberIds.set(m.id, existingId);
     } else {
       const color = FALLBACK_COLORS[colorIdx++ % FALLBACK_COLORS.length]!;
       const row = check(
-        await db.from('members').insert({ name: m.name, rotation_order: rotation, status, color }).select('id').single(),
+        await db.from('book_members').insert({ name: m.name, rotation_order: rotation, status, color }).select('id').single(),
         `멤버 추가(${m.name})`,
       );
       memberIds.set(m.id, row.id);
@@ -94,12 +94,12 @@ export async function importSnapshot(db: Db, snap: Snapshot, log: (s: string) =>
 
   // ── books (제목 기준)
   const bookIds = new Map<string, string>();
-  const existingBooks = check(await db.from('books').select('id,title'), 'books 조회');
+  const existingBooks = check(await db.from('book_books').select('id,title'), 'books 조회');
   const bookByTitle = new Map(existingBooks.map((b) => [b.title, b.id]));
   for (const b of snap.books) {
     const status = STATUS_MAP[b.status];
     if (!status) throw new Error(`알 수 없는 책 상태 "${b.status}" (${b.title})`);
-    const payload: Database['public']['Tables']['books']['Update'] = {
+    const payload: Database['public']['Tables']['book_books']['Update'] = {
       title: b.title,
       authors: splitAuthors(b.authors),
       genre: b.genre,
@@ -112,11 +112,11 @@ export async function importSnapshot(db: Db, snap: Snapshot, log: (s: string) =>
     if (b.pages != null) payload.pages = b.pages; // 비어 있으면 알라딘으로 채운 값을 지우지 않는다
     const existingId = bookByTitle.get(b.title);
     if (existingId) {
-      ok(await db.from('books').update(payload).eq('id', existingId), `책 수정(${b.title})`);
+      ok(await db.from('book_books').update(payload).eq('id', existingId), `책 수정(${b.title})`);
       bookIds.set(b.id, existingId);
     } else {
       const row = check(
-        await db.from('books').insert({ ...payload, title: b.title, info_source: 'manual' }).select('id').single(),
+        await db.from('book_books').insert({ ...payload, title: b.title, info_source: 'manual' }).select('id').single(),
         `책 추가(${b.title})`,
       );
       bookIds.set(b.id, row.id);
@@ -146,7 +146,7 @@ export async function importSnapshot(db: Db, snap: Snapshot, log: (s: string) =>
     if (!mt.date) throw new Error(`모임 "${mt.title}"에 날짜가 없음`);
     const row = check(
       await db
-        .from('meetings')
+        .from('book_meetings')
         .upsert(
           {
             number,
@@ -170,7 +170,7 @@ export async function importSnapshot(db: Db, snap: Snapshot, log: (s: string) =>
     mt.attendeeIds.map((mid) => ({ meeting_id: meetingIds.get(mt.id)!, member_id: member(mid, `${mt.title} 참석자`)! })),
   );
   if (attendees.length) {
-    ok(await db.from('meeting_attendees').upsert(attendees, { onConflict: 'meeting_id,member_id', ignoreDuplicates: true }), 'meeting_attendees');
+    ok(await db.from('book_meeting_attendees').upsert(attendees, { onConflict: 'meeting_id,member_id', ignoreDuplicates: true }), 'book_meeting_attendees');
   }
   log(`참석 기록 ${attendees.length}건 반영`);
 
@@ -190,7 +190,7 @@ export async function importSnapshot(db: Db, snap: Snapshot, log: (s: string) =>
     };
   });
   if (ratingRows.length) {
-    ok(await db.from('ratings').upsert(ratingRows, { onConflict: 'book_id,member_id' }), 'ratings');
+    ok(await db.from('book_ratings').upsert(ratingRows, { onConflict: 'book_id,member_id' }), 'book_ratings');
   }
   log(`평점 ${ratingRows.length}개 반영`);
 
@@ -198,7 +198,7 @@ export async function importSnapshot(db: Db, snap: Snapshot, log: (s: string) =>
 }
 
 export async function countRows(db: Db) {
-  const tables = ['members', 'books', 'book_interests', 'meetings', 'meeting_attendees', 'ratings'] as const;
+  const tables = ['book_members', 'book_books', 'book_interests', 'book_meetings', 'book_meeting_attendees', 'book_ratings'] as const;
   const out: Record<string, number> = {};
   for (const t of tables) {
     const { count, error } = await db.from(t).select('*', { count: 'exact', head: true });

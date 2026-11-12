@@ -9,7 +9,7 @@
     "start": "next start",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "import:1109": "tsx --env-file=.env.local scripts/import-11-09.ts"
+    "import:notion": "tsx --env-file=.env.local scripts/import-notion.ts"
   },
   "dependencies": {
     "@me/core": "workspace:*",

@@ -2,6 +2,8 @@ import 'server-only';
 import { cache } from 'react';
 import { connection } from 'next/server';
 import { createAdminClient } from '@me/core/server/supabase';
+import { isGuest } from '@/lib/auth/access';
+import { maskClubData } from '@/lib/guest-mask';
 
 function must<T>(res: { data: T | null; error: { message: string } | null }, what: string): T {
   if (res.error) throw new Error(`${what}: ${res.error.message}`);
@@ -12,6 +14,7 @@ function must<T>(res: { data: T | null; error: { message: string } | null }, wha
  * 모임 전체 데이터(작은 규모라 한 번에 읽는다).
  * 데이터 캐시는 쓰지 않는다: 요청마다 DB에서 읽어 항상 최신이다.
  * react cache는 같은 요청 안에서 중복 호출(멤버 확인 + 페이지)만 합친다.
+ * 게스트(읽기 전용으로 들어온 사람)에게는 멤버 실명을 가린 데이터를 준다. 모든 화면이 이 함수를 거치므로 여기서 한 번에 막는다.
  */
 export const getClubData = cache(async () => {
   await connection(); // 빌드 때 미리 렌더링하지 않고 요청 시점에 읽는다
@@ -24,7 +27,7 @@ export const getClubData = cache(async () => {
     db.from('book_ratings').select('*'),
     db.from('book_interests').select('*'),
   ]);
-  return {
+  const all = {
     members: must(members, 'book_members'),
     books: must(books, 'book_books'),
     meetings: must(meetings, 'book_meetings'),
@@ -32,6 +35,7 @@ export const getClubData = cache(async () => {
     ratings: must(ratings, 'book_ratings'),
     interests: must(interests, 'book_interests'),
   };
+  return (await isGuest()) ? maskClubData(all) : all;
 });
 
 export type ClubData = Awaited<ReturnType<typeof getClubData>>;

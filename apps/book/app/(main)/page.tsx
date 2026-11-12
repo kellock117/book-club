@@ -14,14 +14,14 @@ import { getView } from '@/lib/view';
 
 
 export default async function HomePage() {
-  const me = (await getCurrentMember())!;
+  const me = await getCurrentMember(); // 게스트(읽기 전용)는 null: 개인용 안내를 건너뛴다
   const { data, s, today, memberById, bookById, colors, meetingOfBook } = await getView();
 
-  const waiting = pendingRatings(s.books, s.members, s.ratings).filter((p) => p.missingMemberIds.includes(me.id));
-  const nextBookId = latestUnratedBook(s.books, s.meetings, s.ratings, me.id);
+  const waiting = me ? pendingRatings(s.books, s.members, s.ratings).filter((p) => p.missingMemberIds.includes(me.id)) : [];
+  const nextBookId = me ? latestUnratedBook(s.books, s.meetings, s.ratings, me.id) : null;
   const reading = data.books.find((b) => b.status === 'reading');
   const selector = nextSelector(s.members, s.books, s.meetings);
-  const iAmNext = selector?.id === me.id;
+  const iAmNext = !!me && selector?.id === me.id;
 
   const dday = nextMeetingDday(s.meetings, today);
   const upcoming = data.meetings.filter((m) => m.date >= today).sort((a, b) => a.date.localeCompare(b.date))[0];
@@ -44,7 +44,7 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="font-serif text-2xl font-bold">{me.name}님, 안녕하세요</h1>
+      <h1 className="font-serif text-2xl font-bold">{me ? `${me.name}님, 안녕하세요` : '독서 모임 기록'}</h1>
 
       {(waiting.length > 0 || (iAmNext && !reading)) && (
         <div className="space-y-2">
@@ -56,7 +56,7 @@ export default async function HomePage() {
           )}
           {iAmNext && !reading && (
             <Link href="/select" className="block rounded-2xl border border-accent bg-surface p-4">
-              <p className="font-semibold">이번엔 {me.name}님이 책을 고를 차례예요</p>
+              <p className="font-semibold">이번엔 {me?.name}님이 책을 고를 차례예요</p>
               <p className="mt-1 text-sm text-muted">이번 달 책 정하기 →</p>
             </Link>
           )}
@@ -89,9 +89,11 @@ export default async function HomePage() {
         ) : (
           <Card className="space-y-3 text-center">
             <p className="font-semibold">다음 책을 골라 주세요{selector ? ` — 선정자: ${selector.name}` : ''}</p>
-            <Link href="/select" className="inline-flex min-h-12 items-center rounded-xl bg-accent px-5 font-semibold text-accent-ink">
-              이번 달 책 정하기
-            </Link>
+            {me && (
+              <Link href="/select" className="inline-flex min-h-12 items-center rounded-xl bg-accent px-5 font-semibold text-accent-ink">
+                이번 달 책 정하기
+              </Link>
+            )}
           </Card>
         )}
       </Section>

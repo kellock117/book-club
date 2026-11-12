@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { initialOf } from '@/lib/guest-mask';
 
 type Props = { id?: string; name: string; color: string; size?: 'sm' | 'md' };
 
@@ -7,7 +8,7 @@ export function Avatar({ id, name, color, size = 'sm' }: Props) {
   const cls = `inline-flex shrink-0 items-center justify-center rounded-full font-bold text-white ${size === 'md' ? 'size-11 text-base' : 'size-7 text-xs'}`;
   const dot = (
     <span className={cls} style={{ backgroundColor: color }} aria-hidden={id ? undefined : true}>
-      {name.slice(0, 1)}
+      {initialOf(name)}
     </span>
   );
   if (!id) return dot;

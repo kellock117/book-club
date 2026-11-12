@@ -1,14 +1,16 @@
 import { safeEqual } from '@me/core/auth/session';
-import { BACKUP_BUCKET, backupFileName, exportAll, expiredBackups, isMonday } from '@me/core/backup';
+import { BACKUP_BUCKET, backupFileName, exportAll, expiredBackups } from '@me/core/backup';
 import { ALL_BACKUP_TABLES } from '@me/core/backup-tables';
 import { createAdminClient } from '@me/core/server/supabase';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * Vercel Cron이 매일 한 번 호출한다.
- * - 매일: members 1행을 읽어 Supabase 무료 플랜의 비활동 일시 중지를 막는다.
- * - 월요일(또는 ?backup=1): 모든 앱의 테이블(core의 ALL_BACKUP_TABLES)을 JSON 하나로 backups 버킷에 저장하고, 12주가 지난 파일을 지운다.
+ * Vercel Cron이 매일 한국 시간 00시(vercel.json의 `0 15 * * *` = UTC 15시)에 한 번 호출한다.
+ * Hobby 플랜 크론은 지정한 시(hour) 안의 아무 때나 실행되므로 00:00~00:59 사이에 돈다.
+ * 1. book_members 1행을 읽어 Supabase 무료 플랜의 비활동 일시 중지를 막는다.
+ * 2. 모든 앱의 테이블(core의 ALL_BACKUP_TABLES)을 JSON 하나(`YYYY-MM-DD.json`, 한국 날짜)로 backups 버킷에 저장하고,
+ *    12주가 지난 파일을 지운다. 같은 날 다시 호출하면 그날 파일을 덮어쓴다(손으로 호출해도 안전).
  * Authorization: Bearer ${CRON_SECRET}이 아니면 401.
  */
 export async function GET(request: Request) {
@@ -19,11 +21,8 @@ export async function GET(request: Request) {
   const db = createAdminClient();
   const now = new Date();
 
-  const { error: pingErr } = await db.from('members').select('id').limit(1);
+  const { error: pingErr } = await db.from('book_members').select('id').limit(1);
   if (pingErr) return Response.json({ ok: false, step: 'ping', error: pingErr.message }, { status: 500 });
-
-  const forced = new URL(request.url).searchParams.get('backup') === '1';
-  if (!forced && !isMonday(now)) return Response.json({ ok: true, ping: true, backup: null });
 
   try {
     const backup = await exportAll(db, ALL_BACKUP_TABLES, now);

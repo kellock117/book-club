@@ -17,19 +17,19 @@ export const getClubData = cache(async () => {
   await connection(); // 빌드 때 미리 렌더링하지 않고 요청 시점에 읽는다
   const db = createAdminClient();
   const [members, books, meetings, attendees, ratings, interests] = await Promise.all([
-    db.from('members').select('*').order('rotation_order'),
-    db.from('books').select('*').order('created_at'),
-    db.from('meetings').select('*').order('number'),
-    db.from('meeting_attendees').select('*'),
-    db.from('ratings').select('*'),
+    db.from('book_members').select('*').order('rotation_order'),
+    db.from('book_books').select('*').order('created_at'),
+    db.from('book_meetings').select('*').order('number'),
+    db.from('book_meeting_attendees').select('*'),
+    db.from('book_ratings').select('*'),
     db.from('book_interests').select('*'),
   ]);
   return {
-    members: must(members, 'members'),
-    books: must(books, 'books'),
-    meetings: must(meetings, 'meetings'),
-    attendees: must(attendees, 'meeting_attendees'),
-    ratings: must(ratings, 'ratings'),
+    members: must(members, 'book_members'),
+    books: must(books, 'book_books'),
+    meetings: must(meetings, 'book_meetings'),
+    attendees: must(attendees, 'book_meeting_attendees'),
+    ratings: must(ratings, 'book_ratings'),
     interests: must(interests, 'book_interests'),
   };
 });

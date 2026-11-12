@@ -10,7 +10,7 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@me/core/database';
 
 // 외래 키 순서
-const TABLES = ['members', 'books', 'meetings', 'meeting_attendees', 'ratings', 'book_interests'] as const;
+const TABLES = ['book_members', 'book_books', 'book_meetings', 'book_meeting_attendees', 'book_ratings', 'book_interests'] as const;
 
 function need(name: string): string {
   const v = process.env[name]?.trim();
@@ -40,8 +40,8 @@ async function main() {
       console.log(`${t}: 원본 ${rows.length}행, 클라우드 ${before.count}행${dry ? ' (dry)' : ''}`);
       continue;
     }
-    // 복합 기본 키 표(meeting_attendees, book_interests)는 기본 키로 알아서 맞추고, 나머지는 id로 맞춘다
-    const compositeKey = t === 'meeting_attendees' || t === 'book_interests';
+    // 복합 기본 키 표(book_meeting_attendees, book_interests)는 기본 키로 알아서 맞추고, 나머지는 id로 맞춘다
+    const compositeKey = t === 'book_meeting_attendees' || t === 'book_interests';
     const { error: upErr } = await dst.from(t).upsert(rows as never, compositeKey ? undefined : { onConflict: 'id' });
     if (upErr) throw new Error(`${t} 쓰기 실패: ${upErr.message}`);
     const after = await dst.from(t).select('*', { count: 'exact', head: true });

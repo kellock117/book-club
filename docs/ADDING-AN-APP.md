@@ -7,7 +7,7 @@
 - 앱 id(영문 소문자, 예: `money`). 쿠키 이름(`site_money`)과 서명 키에 쓰이니 한 번 정하면 바꾸지 않는다.
 - 비밀번호 환경 변수 이름(예: `MONEY_PASSWORD`).
 - 포트(개발용): book 3000, workout 3001, 다음 앱은 3002부터.
-- 새 DB 테이블이 필요한지. 필요하면 `supabase/migrations/`에 마이그레이션부터 쓴다.
+- 새 DB 테이블이 필요한지. 필요하면 `supabase/migrations/`에 마이그레이션부터 쓴다. 테이블·뷰·인덱스 이름은 모두 `<앱 id>_`로 시작한다(예: `money_accounts`).
 
 ## 2. 폴더 만들기
 1. `apps/workout`을 참고해 `apps/<이름>/`에 아래를 만든다.
@@ -25,6 +25,7 @@
 - `app/(main)/layout.tsx`와 모든 서버 액션 첫 줄에 `requireSite(APP_ID, PASSWORD_ENV)`.
 
 ## 4. DB
+- 테이블마다 `comment on table money_accounts is '[가계] 계좌'`처럼 `[앱 이름] 설명` 코멘트를 단다. Supabase 대시보드 Table Editor에 보여서 어느 앱 테이블인지 바로 알 수 있다.
 - 테이블을 만들었다면 `packages/core/src/backup-tables.ts`에 표를 추가하고 `ALL_BACKUP_TABLES`에 이어 붙인다 (임시 데이터는 제외).
 - 마이그레이션을 적용한 뒤 `pnpm --filter @me/core db:types`로 DB 타입을 다시 만든다.
 

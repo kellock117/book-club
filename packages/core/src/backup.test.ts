@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { backupFileName, expiredBackups, isMonday, latestBackup, parseBackup } from './backup';
+import { backupFileName, fetchAllRows, expiredBackups, latestBackup, parseBackup } from './backup';
 
-describe('backupFileName / isMonday', () => {
-  it('UTC 날짜로 이름을 만든다', () => {
+describe('backupFileName', () => {
+  it('한국 날짜로 이름을 만든다', () => {
     expect(backupFileName(new Date('2026-11-16T00:00:00Z'))).toBe('2026-11-16.json');
   });
-  it('2026-11-16은 월요일, 11-17은 아니다', () => {
-    expect(isMonday(new Date('2026-11-16T00:00:00Z'))).toBe(true);
-    expect(isMonday(new Date('2026-11-17T00:00:00Z'))).toBe(false);
+  it('한국 00시(UTC 전날 15시)에 돌면 그날(한국) 날짜가 된다', () => {
+    expect(backupFileName(new Date('2026-11-15T15:00:00Z'))).toBe('2026-11-16.json');
+    expect(backupFileName(new Date('2026-11-15T14:59:00Z'))).toBe('2026-11-15.json');
   });
 });
 
@@ -47,5 +47,65 @@ describe('parseBackup', () => {
     expect(() => parseBackup('not json')).toThrow('JSON');
     expect(() => parseBackup(JSON.stringify({ version: 2, createdAt: 'x', tables: empty }), required)).toThrow('형식');
     expect(() => parseBackup(JSON.stringify({ version: 1, createdAt: 'x', tables: { ...empty, ratings: undefined } }), required)).toThrow('ratings');
+  });
+});
+
+describe('parseBackup 옛 이름 변환', () => {
+  const renames = { members: 'book_members', books: 'book_books' };
+  const text = (tables: object) => JSON.stringify({ version: 1, createdAt: 'x', tables });
+  it('옛 이름의 테이블을 새 이름으로 바꿔서 돌려준다', () => {
+    const b = parseBackup(text({ members: [{ id: 1 }], books: [] }), ['book_members', 'book_books'], renames);
+    expect(Object.keys(b.tables).sort()).toEqual(['book_books', 'book_members']);
+    expect(b.tables.book_members).toEqual([{ id: 1 }]);
+  });
+  it('새 이름 백업은 그대로 통과한다', () => {
+    const b = parseBackup(text({ book_members: [{ id: 2 }], book_books: [] }), ['book_members'], renames);
+    expect(b.tables.book_members).toEqual([{ id: 2 }]);
+  });
+  it('옛 이름과 새 이름이 같이 있으면 새 이름 쪽을 쓴다', () => {
+    const b = parseBackup(text({ members: [{ id: 1 }], book_members: [{ id: 2 }] }), [], renames);
+    expect(b.tables.book_members).toEqual([{ id: 2 }]);
+  });
+  it('변환하고도 필수 테이블이 없으면 거절한다', () => {
+    expect(() => parseBackup(text({ members: [] }), ['book_books'], renames)).toThrow('tables.book_books');
+  });
+});
+
+describe('fetchAllRows 페이지 읽기', () => {
+  // range(from, to)를 흉내 내는 가짜 클라이언트: id 0..n-1 을 정렬된 순서로 돌려준다
+  const fake = (n: number) => {
+    const calls: [number, number][] = [];
+    const db = {
+      from: () => ({
+        select: () => {
+          const q = {
+            order: () => q,
+            range: async (from: number, to: number) => {
+              calls.push([from, to]);
+              const data = Array.from({ length: Math.max(0, Math.min(to + 1, n) - from) }, (_, i) => ({ id: from + i }));
+              return { data, error: null };
+            },
+          };
+          return q;
+        },
+      }),
+    };
+    return { db: db as never, calls };
+  };
+  it('2500행이면 3번에 나눠 빠짐·중복 없이 읽는다', async () => {
+    const { db, calls } = fake(2500);
+    const rows = await fetchAllRows(db, { name: 't', conflictKey: 'id' });
+    expect(rows).toHaveLength(2500);
+    expect(new Set(rows.map((r) => r.id)).size).toBe(2500);
+    expect(calls).toEqual([[0, 999], [1000, 1999], [2000, 2999]]);
+  });
+  it('정확히 페이지 크기만큼이면 빈 페이지를 한 번 더 읽고 끝낸다', async () => {
+    const { db, calls } = fake(1000);
+    expect(await fetchAllRows(db, { name: 't', conflictKey: 'id' })).toHaveLength(1000);
+    expect(calls).toHaveLength(2);
+  });
+  it('0행이면 빈 배열', async () => {
+    const { db } = fake(0);
+    expect(await fetchAllRows(db, { name: 't', conflictKey: 'id' })).toEqual([]);
   });
 });

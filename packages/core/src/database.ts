@@ -23,52 +23,7 @@ export type Database = {
   };
   public: {
     Tables: {
-      book_interests: {
-        Row: {
-          book_id: string;
-          member_id: string;
-        };
-        ComputedFields: never;
-        Insert: {
-          book_id: string;
-          member_id: string;
-        };
-        Update: {
-          book_id?: string;
-          member_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "book_interests_book_id_fkey";
-            columns: ["book_id"];
-            isOneToOne: false;
-            referencedRelation: "book_stats";
-            referencedColumns: ["book_id"];
-          },
-          {
-            foreignKeyName: "book_interests_book_id_fkey";
-            columns: ["book_id"];
-            isOneToOne: false;
-            referencedRelation: "books";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "book_interests_member_id_fkey";
-            columns: ["member_id"];
-            isOneToOne: false;
-            referencedRelation: "member_stats";
-            referencedColumns: ["member_id"];
-          },
-          {
-            foreignKeyName: "book_interests_member_id_fkey";
-            columns: ["member_id"];
-            isOneToOne: false;
-            referencedRelation: "members";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      books: {
+      book_books: {
         Row: {
           authors: string[];
           cover_path: string | null;
@@ -138,33 +93,78 @@ export type Database = {
             foreignKeyName: "books_recommended_by_fkey";
             columns: ["recommended_by"];
             isOneToOne: false;
-            referencedRelation: "member_stats";
+            referencedRelation: "book_member_stats";
             referencedColumns: ["member_id"];
           },
           {
             foreignKeyName: "books_recommended_by_fkey";
             columns: ["recommended_by"];
             isOneToOne: false;
-            referencedRelation: "members";
+            referencedRelation: "book_members";
             referencedColumns: ["id"];
           },
           {
             foreignKeyName: "books_selected_by_fkey";
             columns: ["selected_by"];
             isOneToOne: false;
-            referencedRelation: "member_stats";
+            referencedRelation: "book_member_stats";
             referencedColumns: ["member_id"];
           },
           {
             foreignKeyName: "books_selected_by_fkey";
             columns: ["selected_by"];
             isOneToOne: false;
-            referencedRelation: "members";
+            referencedRelation: "book_members";
             referencedColumns: ["id"];
           },
         ];
       };
-      meeting_attendees: {
+      book_interests: {
+        Row: {
+          book_id: string;
+          member_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          book_id: string;
+          member_id: string;
+        };
+        Update: {
+          book_id?: string;
+          member_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "book_interests_book_id_fkey";
+            columns: ["book_id"];
+            isOneToOne: false;
+            referencedRelation: "book_books";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "book_interests_book_id_fkey";
+            columns: ["book_id"];
+            isOneToOne: false;
+            referencedRelation: "book_stats";
+            referencedColumns: ["book_id"];
+          },
+          {
+            foreignKeyName: "book_interests_member_id_fkey";
+            columns: ["member_id"];
+            isOneToOne: false;
+            referencedRelation: "book_member_stats";
+            referencedColumns: ["member_id"];
+          },
+          {
+            foreignKeyName: "book_interests_member_id_fkey";
+            columns: ["member_id"];
+            isOneToOne: false;
+            referencedRelation: "book_members";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      book_meeting_attendees: {
         Row: {
           meeting_id: string;
           member_id: string;
@@ -183,26 +183,26 @@ export type Database = {
             foreignKeyName: "meeting_attendees_meeting_id_fkey";
             columns: ["meeting_id"];
             isOneToOne: false;
-            referencedRelation: "meetings";
+            referencedRelation: "book_meetings";
             referencedColumns: ["id"];
           },
           {
             foreignKeyName: "meeting_attendees_member_id_fkey";
             columns: ["member_id"];
             isOneToOne: false;
-            referencedRelation: "member_stats";
+            referencedRelation: "book_member_stats";
             referencedColumns: ["member_id"];
           },
           {
             foreignKeyName: "meeting_attendees_member_id_fkey";
             columns: ["member_id"];
             isOneToOne: false;
-            referencedRelation: "members";
+            referencedRelation: "book_members";
             referencedColumns: ["id"];
           },
         ];
       };
-      meetings: {
+      book_meetings: {
         Row: {
           book_id: string | null;
           created_at: string;
@@ -236,19 +236,19 @@ export type Database = {
             foreignKeyName: "meetings_book_id_fkey";
             columns: ["book_id"];
             isOneToOne: false;
-            referencedRelation: "book_stats";
-            referencedColumns: ["book_id"];
+            referencedRelation: "book_books";
+            referencedColumns: ["id"];
           },
           {
             foreignKeyName: "meetings_book_id_fkey";
             columns: ["book_id"];
             isOneToOne: false;
-            referencedRelation: "books";
-            referencedColumns: ["id"];
+            referencedRelation: "book_stats";
+            referencedColumns: ["book_id"];
           },
         ];
       };
-      members: {
+      book_members: {
         Row: {
           color: string;
           created_at: string;
@@ -276,7 +276,7 @@ export type Database = {
         };
         Relationships: [];
       };
-      ratings: {
+      book_ratings: {
         Row: {
           book_id: string;
           created_at: string;
@@ -313,28 +313,28 @@ export type Database = {
             foreignKeyName: "ratings_book_id_fkey";
             columns: ["book_id"];
             isOneToOne: false;
-            referencedRelation: "book_stats";
-            referencedColumns: ["book_id"];
+            referencedRelation: "book_books";
+            referencedColumns: ["id"];
           },
           {
             foreignKeyName: "ratings_book_id_fkey";
             columns: ["book_id"];
             isOneToOne: false;
-            referencedRelation: "books";
-            referencedColumns: ["id"];
+            referencedRelation: "book_stats";
+            referencedColumns: ["book_id"];
           },
           {
             foreignKeyName: "ratings_member_id_fkey";
             columns: ["member_id"];
             isOneToOne: false;
-            referencedRelation: "member_stats";
+            referencedRelation: "book_member_stats";
             referencedColumns: ["member_id"];
           },
           {
             foreignKeyName: "ratings_member_id_fkey";
             columns: ["member_id"];
             isOneToOne: false;
-            referencedRelation: "members";
+            referencedRelation: "book_members";
             referencedColumns: ["id"];
           },
         ];
@@ -394,8 +394,8 @@ export type Database = {
       };
       workout_sets: {
         Row: {
-          ended_at: string | null;
           edited: boolean;
+          ended_at: string | null;
           exercise: string;
           extra: Json | null;
           ord: number;
@@ -407,8 +407,8 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
-          ended_at?: string | null;
           edited?: boolean;
+          ended_at?: string | null;
           exercise: string;
           extra?: Json | null;
           ord: number;
@@ -419,8 +419,8 @@ export type Database = {
           unit?: string;
         };
         Update: {
-          ended_at?: string | null;
           edited?: boolean;
+          ended_at?: string | null;
           exercise?: string;
           extra?: Json | null;
           ord?: number;
@@ -442,17 +442,7 @@ export type Database = {
       };
     };
     Views: {
-      book_stats: {
-        Row: {
-          avg_score: number | null;
-          book_id: string;
-          rating_count: number | null;
-          stddev_score: number | null;
-        };
-        ComputedFields: never;
-        Relationships: [];
-      };
-      member_stats: {
+      book_member_stats: {
         Row: {
           attended_count: number | null;
           avg_score: number | null;
@@ -472,6 +462,16 @@ export type Database = {
           member_id?: string | null;
           selected_count?: never;
         };
+        Relationships: [];
+      };
+      book_stats: {
+        Row: {
+          avg_score: number | null;
+          book_id: string;
+          rating_count: number | null;
+          stddev_score: number | null;
+        };
+        ComputedFields: never;
         Relationships: [];
       };
     };

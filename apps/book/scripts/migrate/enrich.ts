@@ -42,7 +42,7 @@ async function copyCover(db: Db, bookId: string, coverUrl: string): Promise<stri
 
 /** ISBN이 없는 책마다 알라딘에서 제목+저자로 검색해 ISBN·쪽수·표지 등을 채운다. 이미 채워진 책은 건드리지 않는다. */
 export async function enrichBooks(db: Db, ttbKey: string): Promise<{ enriched: number; skipped: string[] }> {
-  const { data: books, error } = await db.from('books').select('id,title,authors,pages,cover_path').is('isbn13', null);
+  const { data: books, error } = await db.from('book_books').select('id,title,authors,pages,cover_path').is('isbn13', null);
   if (error) throw new Error(`books 조회: ${error.message}`);
   let enriched = 0;
   const skipped: string[] = [];
@@ -66,7 +66,7 @@ export async function enrichBooks(db: Db, ttbKey: string): Promise<{ enriched: n
         }
       }
       const { error: upErr } = await db
-        .from('books')
+        .from('book_books')
         .update({
           isbn13: chosen.isbn13,
           pages: b.pages ?? detail.pages ?? chosen.pages,

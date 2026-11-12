@@ -28,14 +28,14 @@ export async function saveRating(_prev: RateState, formData: FormData): Promise<
   const db = createAdminClient();
 
   // 캐시가 아니라 DB에서 직접: 완료된 책에만 평점을 남길 수 있다
-  const { data: book, error: bookErr } = await db.from('books').select('id,status').eq('id', input.bookId).maybeSingle();
+  const { data: book, error: bookErr } = await db.from('book_books').select('id,status').eq('id', input.bookId).maybeSingle();
   if (bookErr) return { errors: { form: ['저장하지 못했어요. 잠시 뒤에 다시 해 주세요'] }, values };
   if (!book) return { errors: { bookId: ['없는 책이에요'] }, values };
   if (book.status !== 'done') return { errors: { bookId: ['아직 모임이 끝나지 않은 책이에요'] }, values };
 
   // (책, 멤버)당 1개. 다시 내면 덮어쓴다
   const { error } = await db
-    .from('ratings')
+    .from('book_ratings')
     .upsert(
       { book_id: input.bookId, member_id: me.id, score: input.score, one_liner: input.oneLiner, quote: input.quote },
       { onConflict: 'book_id,member_id' },

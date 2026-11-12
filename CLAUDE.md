@@ -76,3 +76,17 @@
 - 검사: `pnpm check` (= `turbo run typecheck test build`). 앱 하나만: `pnpm --filter workout test`.
 - 로컬 DB: Docker를 켜고 `npx supabase start && npx supabase db reset`. 마이그레이션을 바꾸면 `pnpm --filter @me/core db:types`.
 - 새 앱 추가 절차는 `docs/ADDING-AN-APP.md`.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues(`gh` CLI). 앱 개발 티켓만 이슈로 만들고, 개인이 할 일은 `docs/TODO.md`에 쓰고, 끝나면 `docs/DONE.md`로 옮긴다. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+기본 5개 라벨(`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+single-context (루트 `GLOSSARY.md` + `docs/adr/`, 필요할 때 만든다). See `docs/agents/domain.md`.

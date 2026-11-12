@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function BookPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!UUID.test(id)) notFound();
-  const me = (await getCurrentMember())!;
+  const me = await getCurrentMember(); // 게스트(읽기 전용)는 null: 평점 버튼을 숨긴다
   const { data, s, memberById, meetingOfBook } = await getView();
   const book = data.books.find((b) => b.id === id);
   if (!book) notFound();
@@ -31,7 +31,7 @@ export default async function BookPage({ params }: { params: Promise<{ id: strin
   const meeting = meetingOfBook(book.id);
   const { avg, n } = bookAverage(s.ratings, book.id);
   const ratings = data.ratings.filter((r) => r.book_id === book.id);
-  const myRating = ratings.find((r) => r.member_id === me.id);
+  const myRating = me ? ratings.find((r) => r.member_id === me.id) : undefined;
   const missing = book.status === 'done' ? (pendingRatings(s.books, s.members, s.ratings).find((p) => p.bookId === book.id)?.missingMemberIds ?? []) : [];
   const interested = data.interests.filter((i) => i.book_id === book.id).length;
   const members = data.members.filter((m) => m.status === 'active');
@@ -60,7 +60,7 @@ export default async function BookPage({ params }: { params: Promise<{ id: strin
         </div>
       </div>
 
-      {book.status === 'done' && (
+      {me && book.status === 'done' && (
         <Link href={`/rate?book=${book.id}`} className="flex min-h-12 items-center justify-center rounded-xl bg-accent px-4 font-semibold text-accent-ink">
           {myRating ? '내 평점 고치기' : '내 평점 남기기'}
         </Link>

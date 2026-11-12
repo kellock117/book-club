@@ -19,6 +19,8 @@ interface Props {
   /** 지금 보는 항목의 key (MAP_ENTRIES[].key) */
   entryKey: string;
   onEntry: (key: string) => void;
+  /** 읽기 전용으로 들어온 사람: 상단바에 "운동 기록" 탭 대신 로그인 버튼이 뜬다 */
+  guest?: boolean;
 }
 
 /** 한쪽 몸(앞 또는 뒤)을 그린다. 중심선(center)이 아닌 경로는 좌우 반전해서 한 번 더 그린다. */
@@ -48,7 +50,7 @@ function Body({ list, lv, focus, onPick }: { list: BodyPath[]; lv: Partial<Recor
   );
 }
 
-export default function MuscleMapView({ tab, onTab, onHelp, entryKey, onEntry }: Props) {
+export default function MuscleMapView({ tab, onTab, onHelp, entryKey, onEntry, guest = false }: Props) {
   const index = Math.max(0, MAP_ENTRIES.findIndex((e) => e.key === entryKey));
   const entry = MAP_ENTRIES[index]!;
   const [focus, setFocus] = useState<MuscleKey | null>(null);
@@ -65,7 +67,7 @@ export default function MuscleMapView({ tab, onTab, onHelp, entryKey, onEntry }:
 
   return (
     <div className="wrap">
-      <TopBar tab={tab} onTab={onTab} onHelp={onHelp}>
+      <TopBar tab={tab} onTab={onTab} onHelp={onHelp} guest={guest}>
         <div className="pick">
           <button className="nav" type="button" aria-label="이전 운동" onClick={() => go(index - 1)}>
             ‹

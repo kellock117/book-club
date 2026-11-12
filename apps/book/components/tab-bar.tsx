@@ -11,12 +11,14 @@ const TABS = [
   { href: '/meetings', label: '모임', icon: '📅' },
 ];
 
-export function TabBar() {
+/** guest: 읽기 전용으로 보는 사람에게는 쓰기 화면(평점)으로 가는 탭을 숨긴다. */
+export function TabBar({ guest = false }: { guest?: boolean }) {
   const pathname = usePathname();
+  const tabs = guest ? TABS.filter((t) => t.href !== '/rate') : TABS;
   return (
     <nav aria-label="주요 메뉴" className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface pb-[env(safe-area-inset-bottom)]">
       <ul className="mx-auto flex max-w-md">
-        {TABS.map((t) => {
+        {tabs.map((t) => {
           const active = t.href === '/' ? pathname === '/' : pathname.startsWith(t.href);
           return (
             <li key={t.href} className="flex-1">

@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Avatar } from '@/components/avatar';
 import { Cover } from '@/components/cover';
 import { Card } from '@me/ui/section';
+import { isLoggedIn } from '@/lib/auth/access';
 import { fmtDate, fmtDday, fmtScore } from '@/lib/format';
 import { bookAverage, daysBetween } from '@/lib/stats';
 import { getView } from '@/lib/view';
@@ -11,6 +12,7 @@ export const metadata: Metadata = { title: '모임 기록 · 독서 모임' };
 
 export default async function MeetingsPage() {
   const { data, s, today, memberById, bookById } = await getView();
+  const canEdit = await isLoggedIn(); // 게스트(읽기 전용)에게는 수정 링크를 숨긴다
   const list = [...data.meetings].sort((a, b) => b.date.localeCompare(a.date) || b.number - a.number);
 
   return (
@@ -62,9 +64,11 @@ export default async function MeetingsPage() {
                       </ul>
                       {!upcoming && <span className="text-sm tabular-nums"><span aria-hidden className="text-star">★</span> {fmtScore(avg)}</span>}
                     </div>
-                    <Link href={`/meetings/${m.id}/edit`} className="inline-flex min-h-11 items-center text-sm font-medium text-muted underline underline-offset-2">
-                      기록하기
-                    </Link>
+                    {canEdit && (
+                      <Link href={`/meetings/${m.id}/edit`} className="inline-flex min-h-11 items-center text-sm font-medium text-muted underline underline-offset-2">
+                        기록하기
+                      </Link>
+                    )}
                   </div>
                 </div>
               </li>

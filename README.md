@@ -1,71 +1,74 @@
 # me-apps
 
-내가 쓰는 개인 앱들을 한 레포에 모은 pnpm + turbo 모노레포입니다. 앱마다 사이트(서브도메인)·비밀번호·Vercel 프로젝트가 따로고, DB(Supabase)와 공용 코드만 함께 씁니다.
+일상에서 불편했던 것을 직접 만들어 쓰는 개인 앱 모음입니다. 지금은 **독서 모임 기록장**과 **운동 기록 앱** 두 개가 실제로 쓰이고 있고, 한 레포(모노레포)에서 DB와 공용 코드를 나눠 씁니다.
 
-| 앱 | 주소 | 설명 |
-| --- | --- | --- |
-| `apps/book` | `book.<도메인>` | 친구끼리 쓰는 독서 모임 기록 |
-| `apps/workout` | `workout.<도메인>` | 운동 기록(세트 타이머·휴식 계산)과 근육 지도 |
+설계와 결정은 제가 하고, 구현은 [Claude Code](https://claude.com/claude-code)와 함께 했습니다. 이 레포는 "AI와 어떻게 일하는가"를 보여 주는 결과물이기도 해서, 그 방식을 아래에 적었습니다.
 
-| 패키지 | 역할 |
+## 앱
+
+### 📚 독서 모임 (`apps/book`)
+친구들과 매달 한 권씩 읽는 모임의 기록장입니다. 노션은 차트가 약하고 입력과 보기가 따로라 헷갈려서, 모임 자리에서 휴대폰으로 링크 하나만 열면 평점을 1분 안에 남기도록 만들었습니다.
+- 평점 남기기, 책 추천(위시리스트)·선정, 모임 기록, 멤버 프로필
+- 책 검색 API로 표지·저자·쪽수를 자동 입력
+- 대시보드와 차트(지금 읽는 책, 다음 선정자, 멤버별 통계)
+- 관리자 화면과 백업 내려받기
+
+### 🏋️ 운동 기록 (`apps/workout`)
+운동하면서 쓰는 세트 타이머 겸 기록장입니다. 노션 아티팩트로 쓰던 프로토타입을 정식 웹앱으로 옮겼습니다.
+- 세트마다 시작·끝을 누르면 그 사이가 휴식으로 계산되고, 1분 30초에 알림음
+- 순서 잠금, 건너뛰기, 삭제·되돌리기, 시각 수정
+- 같은 구분의 최근 운동에서 예정 세트·횟수를 가져옴
+- 종목별 근육 지도(SVG)
+- 기기 저장 + 서버 임시 저장으로 탭이 닫혀도 이어짐, 홈 화면에 추가하는 PWA
+
+## 기술
+
+| 영역 | 사용 |
 | --- | --- |
-| `packages/core` (`@me/core`) | 서버 공용: 인증·잠금, 날짜, 백업, Supabase 서버 클라이언트, DB 타입 |
-| `packages/ui` (`@me/ui`) | 화면 공용: Section/Card, Toast, LoginForm, 테마 |
-| `packages/config` (`@me/config`) | tsconfig 기본값 |
+| 프레임워크 | Next.js 16 (App Router, Server Components·Server Actions), React 19, TypeScript |
+| 스타일·차트 | Tailwind CSS 4, Recharts |
+| 데이터 | Supabase (Postgres, Storage), 마이그레이션 SQL로 스키마 관리 |
+| 검증·테스트 | zod, Vitest |
+| 모노레포 | pnpm 워크스페이스 + Turborepo, 공용 패키지(`@me/core`, `@me/ui`, `@me/config`) |
+| 배포 | Vercel, GitHub Actions (검사 → DB 마이그레이션 → 바뀐 앱만 배포) |
 
-DB는 하나를 앱들이 나눠 씁니다. 테이블 이름은 `<앱>_<이름>`입니다 (독서 = `book_*`, 운동 = `workout_*`). 대시보드에서 접두사로 앱을 구분하고, 테이블 설명(코멘트)에도 `[독서]`·`[운동]`이 붙어 있습니다.
-백업은 매일 한국 시간 00시에 전 앱 테이블을 JSON 하나로 저장합니다 (12주 보관).
+## 설계에서 신경 쓴 것
 
-규칙과 구조는 [`CLAUDE.md`](CLAUDE.md), 함정·가정·할 일은 [`docs/NOTES.md`](docs/NOTES.md), 새 앱 추가는 [`docs/ADDING-AN-APP.md`](docs/ADDING-AN-APP.md).
+- **브라우저는 DB에 직접 붙지 않습니다.** 모든 Supabase 호출은 서버에서만 하고, 키는 서버 환경 변수에만 둡니다. RLS는 켜고 정책은 두지 않아서 키가 없으면 아무것도 읽히지 않습니다.
+- **앱마다 잠금이 따로입니다.** 서명한 쿠키와 상수 시간 비교, 로그인 시도 제한을 공용 패키지에 두고 앱별 비밀번호로 씁니다.
+- **공용 코드는 기능별로 나눴습니다.** 인증, 날짜, 백업, 화면 조각을 패키지로 빼고, 한 앱에만 쓰이는 것은 앱에 남깁니다. 기준은 `CLAUDE.md`에 적어 두었습니다.
+- **데이터 안전.** 하루 한 번 모든 앱 테이블을 JSON으로 백업하고, 별도 비공개 저장소로 사본을 복사합니다. 1000행 조회 제한은 페이지네이션으로 넘고, 복원 스크립트와 옛 테이블 이름 매핑을 테스트로 덮었습니다.
+- **테이블 이름 규칙** `<앱>_<이름>`으로 한 DB 안에서 앱을 구분하고, 테이블 설명에도 표시합니다. 이름을 바꾼 마이그레이션은 FK·RLS·권한이 유지되는 `rename`으로 했습니다.
+- **계산 로직은 UI에서 분리해 테스트합니다.** 휴식 시간, 새벽 5시 기준일, 예정값 계산 등을 순수 함수로 두었습니다.
 
-## 로컬 실행
+## AI와 일하는 방식
 
-pnpm은 corepack으로 씁니다 (버전은 루트 `package.json`의 `packageManager`에 고정).
+- **규칙을 문서로 남깁니다.** `CLAUDE.md`에 스택, 패키지 경계, 키 규칙, 주석 규칙, 커밋 전 검사 기준을 적어 두면 세션이 바뀌어도 같은 기준으로 작업합니다. Next 16처럼 학습 데이터와 다른 버전은 `AGENTS.md`로 "코드 쓰기 전에 설치된 문서를 읽어라"고 지시합니다.
+- **작업 전에 계획과 시간을 먼저 합의합니다.** 이전 모노레포 전환, 테이블 접두사 변경, 백업 개편은 모두 단계와 위험을 먼저 논의한 뒤 진행했습니다.
+- **AI의 제안에 반박하고 결정은 제가 합니다.** 예를 들어 테이블 이름은 AI가 일관성을 이유로 다른 안을 권했지만, 저는 다른 선택을 했고 그대로 반영됐습니다. 백업을 어디에 둘지도 공개 저장소의 위험을 따져서 비공개 저장소로 정했습니다.
+- **검증 가능한 상태로만 넘깁니다.** 타입 검사, 테스트, 빌드가 통과해야 커밋하고, 로컬 DB를 초기화해 마이그레이션을 실제로 돌려 본 뒤 타입을 다시 생성합니다.
+- **함정과 가정을 기록합니다.** 코드로 알 수 없는 것(플랫폼 제약, 임시로 둔 가정, 사용자가 해야 할 일)은 [`docs/NOTES.md`](docs/NOTES.md)에 바로바로 적습니다.
+- **새 앱 추가 절차를 문서화했습니다.** [`docs/ADDING-AN-APP.md`](docs/ADDING-AN-APP.md)의 체크리스트대로 하면 앱 하나가 더 붙습니다.
 
-```bash
-corepack enable
-pnpm install
-cp apps/book/.env.example apps/book/.env.local        # 값을 채운다 (커밋하지 않는다)
-cp apps/workout/.env.example apps/workout/.env.local
-cp supabase/seed.example.sql supabase/seed.sql         # 멤버 이름을 바꾼다
-npx supabase start && npx supabase db reset            # Docker가 켜져 있어야 한다
-pnpm --filter book dev      # http://localhost:3000
-pnpm --filter workout dev   # http://localhost:3001
+## 앞으로
+
+확정이 아니라 후보입니다.
+
+- 운동: 휴식 알림(Web Push), 주간 볼륨·종목별 추이
+- 독서: 모임 전날 알림, 연말 결산
+- 새 앱: 수면 기록, 돈 관리
+- 앱들을 한곳에서 여는 허브 페이지
+
+## 구조
+
 ```
-
-앱 둘을 동시에 띄우려면 `pnpm dev`(전체). 두 앱은 비밀번호·쿠키가 따로라서 한쪽 로그인으로 다른 쪽이 열리지 않습니다.
-
-## 검사
-
-```bash
-pnpm check    # 타입 검사 + 테스트 + 빌드 (turbo가 바뀐 부분만 다시 돈다)
+apps/
+  book/      독서 모임
+  workout/   운동 기록
+packages/
+  core/      서버 공용: 인증·잠금, 날짜, 백업, Supabase 클라이언트, DB 타입
+  ui/        화면 공용: Section/Card, Toast, 로그인 폼, 테마
+  config/    tsconfig 기본값
+supabase/    마이그레이션 (DB 하나를 앱들이 나눠 씀)
+docs/        NOTES, ADDING-AN-APP
 ```
-
-## 배포 (GitHub Actions)
-
-`main`에 푸시하면 `.github/workflows/deploy.yml`이 검사 → Supabase 마이그레이션 → Vercel 배포(앱별, 바뀐 앱만) 순서로 돕니다.
-Vercel의 자체 Git 배포는 각 앱의 `vercel.json`에서 꺼 두었습니다(이중 배포 방지).
-
-### GitHub 저장소 설정 (Settings → Secrets and variables → Actions)
-
-| 시크릿 | 값 |
-| --- | --- |
-| `SUPABASE_ACCESS_TOKEN` | Supabase 계정 → Access Tokens |
-| `SUPABASE_PROJECT_REF` | 프로젝트 URL의 `xxxx.supabase.co`에서 `xxxx` |
-| `SUPABASE_DB_PASSWORD` | 프로젝트 생성 때 정한 DB 비밀번호 |
-| `VERCEL_TOKEN` | Vercel → Account Settings → Tokens |
-| `VERCEL_ORG_ID` | 로컬에서 `npx vercel link` 후 `.vercel/project.json` |
-| `VERCEL_PROJECT_ID_BOOK` | book 프로젝트의 projectId |
-| `VERCEL_PROJECT_ID_WORKOUT` | workout 프로젝트의 projectId |
-
-`production` 환경(Settings → Environments)에 승인자를 지정하면 DB 변경과 배포 전에 사람이 확인합니다.
-
-### Vercel 프로젝트 (앱마다 하나)
-
-| 설정 | book | workout |
-| --- | --- | --- |
-| Root Directory | `apps/book` | `apps/workout` |
-| 도메인 | `book.<도메인>` (기존 `*.vercel.app`도 유지) | `workout.<도메인>` |
-| 환경 변수 | `apps/book/.env.example` 참고 | `SUPABASE_URL`, `SUPABASE_SECRET_KEY`, `WORKOUT_PASSWORD` |
-
-비밀 값은 GitHub이 아니라 Vercel 환경 변수에만 둡니다. 자세한 순서와 주의점은 `docs/NOTES.md`.

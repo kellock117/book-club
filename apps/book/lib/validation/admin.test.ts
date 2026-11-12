@@ -4,9 +4,9 @@ import { bookEditSchema, memberSchema } from './admin';
 const ID = 'bbbbbbbb-7feb-80aa-8a1d-c67ae5804206';
 
 describe('memberSchema', () => {
-  const ok = { name: '김민채', rotationOrder: '2', color: '#8b5e3c', status: 'active' };
+  const ok = { name: '멤버A', rotationOrder: '2', color: '#8b5e3c', status: 'active' };
   it('정상 입력', () => {
-    expect(memberSchema.parse(ok)).toEqual({ name: '김민채', rotationOrder: 2, color: '#8b5e3c', status: 'active' });
+    expect(memberSchema.parse(ok)).toEqual({ name: '멤버A', rotationOrder: 2, color: '#8b5e3c', status: 'active' });
   });
   it('이름이 비었거나 색 형식·상태·순서가 틀리면 거절', () => {
     expect(memberSchema.safeParse({ ...ok, name: '  ' }).success).toBe(false);

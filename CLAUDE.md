@@ -58,6 +58,11 @@
 - `apps/<앱>/scripts/`에 두고 `package.json`에 `tsx --env-file=.env.local …` 스크립트로 등록한다. 다시 실행해도 같은 결과(멱등)여야 한다.
 - 개인정보가 든 입력 파일은 `.gitignore`에 넣는다. 레포에 올려도 되는 작은 픽스처만 `scripts/fixtures/`에 둔다.
 
+## README와 앞으로 할 일
+- 루트 `README.md`는 남에게 보여 주는 소개서다(무엇을 만들었고, 어떤 기술·AI 활용을 했는지). 사용법·배포 절차는 넣지 않는다(그건 `docs/`).
+- 앱이나 기능을 새로 만들 계획·아이디어가 생기면 그 자리에서 README의 "앞으로" 목록에 적는다. 만들고 나면 "앱" 섹션으로 옮긴다.
+- 레포가 공개라서 실명·비밀번호·키·개인 기록은 README와 문서에 쓰지 않는다. 멤버는 "멤버 A"처럼 가린다.
+
 ## 명령
 - 개발 서버: `pnpm --filter book dev`(3000), `pnpm --filter workout dev`(3001). 전체는 `pnpm dev`.
 - 검사: `pnpm check` (= `turbo run typecheck test build`). 앱 하나만: `pnpm --filter workout test`.

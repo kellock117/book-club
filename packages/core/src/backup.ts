@@ -21,8 +21,10 @@ export type TableSpec = {
 
 export const BACKUP_BUCKET = 'backups';
 export const BACKUP_KEEP_WEEKS = 12;
-/** supabase-js 한 번의 select가 돌려주는 기본 상한. 이만큼 오면 잘렸을 수 있다. */
+/** supabase-js 한 번의 select가 돌려주는 상한. 이 크기로 나눠 읽는다. */
 const SELECT_LIMIT = 1000;
+/** 한 테이블에서 읽을 최대 행 수(무한 반복 방지 안전장치). */
+const MAX_ROWS = 100_000;
 
 const backupSchema = z.object({
   version: z.literal(1),
@@ -83,15 +85,25 @@ export function latestBackup(names: string[]): string | null {
 // supabase-js의 제네릭이 테이블 이름마다 달라 문자열 테이블을 다룰 때는 느슨한 타입을 쓴다.
 type AnyClient = SupabaseClient<any, any, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-/** 표에 있는 모든 테이블을 읽어 백업 객체를 만든다. 행이 1000개 이상이면 잘렸을 수 있어 일부러 실패시킨다. */
+/** 한 테이블을 페이지 단위로 끝까지 읽는다. 행이 겹치거나 빠지지 않도록 conflictKey 열로 정렬한다. */
+export async function fetchAllRows(db: AnyClient, spec: TableSpec, pageSize: number = SELECT_LIMIT): Promise<Record<string, unknown>[]> {
+  const orderCols = spec.conflictKey.split(',').map((c) => c.trim());
+  const rows: Record<string, unknown>[] = [];
+  for (let from = 0; ; from += pageSize) {
+    if (from >= MAX_ROWS) throw new Error(`${spec.name}가 ${MAX_ROWS}행을 넘었어요. 백업 방식을 다시 검토해야 해요`);
+    let q = db.from(spec.name).select('*');
+    for (const c of orderCols) q = q.order(c);
+    const { data, error } = await q.range(from, from + pageSize - 1);
+    if (error) throw new Error(`${spec.name} 읽기 실패: ${error.message}`);
+    rows.push(...(data ?? []));
+    if ((data?.length ?? 0) < pageSize) return rows;
+  }
+}
+
+/** 표에 있는 모든 테이블을 읽어 백업 객체를 만든다. */
 export async function exportAll(db: AnyClient, specs: readonly TableSpec[], now: Date = new Date()): Promise<Backup> {
   const tables: Backup['tables'] = {};
-  for (const { name } of specs) {
-    const { data, error } = await db.from(name).select('*');
-    if (error) throw new Error(`${name} 읽기 실패: ${error.message}`);
-    if ((data?.length ?? 0) >= SELECT_LIMIT) throw new Error(`${name}가 ${SELECT_LIMIT}행 이상이라 백업이 잘릴 수 있어요. 페이지 단위 읽기를 추가해야 해요`);
-    tables[name] = data ?? [];
-  }
+  for (const spec of specs) tables[spec.name] = await fetchAllRows(db, spec);
   return { version: 1, createdAt: now.toISOString(), tables };
 }
 

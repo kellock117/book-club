@@ -1,0 +1,60 @@
+# 백업 사본 만들기: Supabase Storage(backups 버킷)의 최신 백업을 별도의 "비공개" GitHub 저장소에 복사한다.
+#
+# 왜: 백업이 같은 Supabase 프로젝트에만 있으면 프로젝트를 잃을 때 같이 사라진다.
+# 주의: 이 저장소(me-apps)는 공개라서 백업을 여기에 올리거나 아티팩트로 남기면 누구나 받을 수 있다. 반드시 비공개 저장소로만 보낸다.
+# 알림: 최신 백업이 36시간보다 오래됐거나(크론 실패) 복사가 실패하면 이 작업이 실패해 GitHub이 메일을 보낸다.
+#
+# 필요한 설정(Settings → Secrets and variables → Actions):
+#   secrets   SUPABASE_URL, SUPABASE_SECRET_KEY   (앱과 같은 값)
+#   secrets   BACKUP_REPO_TOKEN                   (비공개 백업 저장소 한 곳에만 Contents 쓰기 권한을 준 fine-grained 토큰)
+#   variables BACKUP_REPO                         (예: <계정>/me-apps-backups)
+name: backup-mirror
+
+on:
+  schedule:
+    - cron: '0 16 * * *' # UTC 16시 = 한국 01시. 한국 00시대에 도는 백업 크론 뒤에 실행된다
+  workflow_dispatch: {}
+
+permissions: {}
+
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+    steps:
+      - name: 비공개 백업 저장소 받기
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.BACKUP_REPO }}
+          token: ${{ secrets.BACKUP_REPO_TOKEN }}
+          path: mirror
+
+      - name: 최신 백업 내려받기
+        run: |
+          set -euo pipefail
+          auth=(-H "Authorization: Bearer $SUPABASE_SECRET_KEY" -H "apikey: $SUPABASE_SECRET_KEY")
+          # YYYY-MM-DD.json 형식만 골라 가장 최근 것을 찾는다
+          name=$(curl -fsS "${auth[@]}" -H 'Content-Type: application/json' \
+            -d '{"prefix":"","limit":1000}' "$SUPABASE_URL/storage/v1/object/list/backups" \
+            | jq -r '[.[].name | select(test("^[0-9]{4}-[0-9]{2}-[0-9]{2}\\.json$"))] | sort | last // empty')
+          [ -n "$name" ] || { echo "::error::backups 버킷에 백업 파일이 없어요"; exit 1; }
+          curl -fsS "${auth[@]}" "$SUPABASE_URL/storage/v1/object/backups/$name" -o "mirror/$name"
+          echo "name=$name" >> "$GITHUB_ENV"
+          # 올바른 JSON이고 36시간 안에 만든 백업인지 확인한다 (크론이 멈췄는지 알아채기 위해)
+          created=$(jq -r '.createdAt' "mirror/$name")
+          age=$(( $(date +%s) - $(date -d "$created" +%s) ))
+          echo "최신 백업: $name (만든 지 $((age / 3600))시간)"
+          [ "$age" -lt $((36 * 3600)) ] || { echo "::error::최신 백업이 36시간보다 오래됐어요. 크론이 멈췄는지 확인하세요"; exit 1; }
+
+      - name: 비공개 저장소에 커밋
+        working-directory: mirror
+        run: |
+          git config user.name "backup-mirror"
+          git config user.email "backup-mirror@users.noreply.github.com"
+          git add "$name"
+          if git diff --cached --quiet; then echo "새 파일 없음"; exit 0; fi
+          git commit -m "backup $name"
+          git push
